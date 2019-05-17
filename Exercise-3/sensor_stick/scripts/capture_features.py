@@ -2,6 +2,8 @@
 import numpy as np
 import pickle
 import rospy
+import time
+
 
 from sensor_stick.pcl_helper import *
 from sensor_stick.training_helper import spawn_model
@@ -22,28 +24,43 @@ def get_normals(cloud):
 
 if __name__ == '__main__':
     rospy.init_node('capture_node')
-
-    models = [\
-       'beer',
-       'bowl',
-       'create',
-       'disk_part',
-       'hammer',
-       'plastic_cup',
-       'soda_can']
+    # separated old models out to optimize training time
+    o_models = [\
+        'beer',
+        'bowl',
+        'create',
+        'disk_part',
+        'hammer',
+        'plastic_cup',
+        'soda_can']
+    # new models to train on
+    n_models = [\
+        'sticky_notes',
+        'book',
+        'snacks',
+        'biscuits',
+        'eraser',
+        'soap2',
+        'soap',
+        'glue']
 
     # Disable gravity and delete the ground plane
     initial_setup()
     labeled_features = []
+    # delete any models that may have remained in gazebo prior to training
+    delete_model()
 
-    for model_name in models:
+    # loop through models to train on
+    for model_name in n_models:
         spawn_model(model_name)
+        time.sleep(1)
 
-        for i in range(5):
-            # make five attempts to get a valid a point cloud then give up
+        # capture 300 features per model
+        for i in range(300):
+            # make 300 attempts to get a valid a point cloud then give up
             sample_was_good = False
             try_count = 0
-            while not sample_was_good and try_count < 5:
+            while not sample_was_good and try_count < 300:
                 sample_cloud = capture_sample()
                 sample_cloud_arr = ros_to_pcl(sample_cloud).to_array()
 
@@ -55,7 +72,7 @@ if __name__ == '__main__':
                     sample_was_good = True
 
             # Extract histogram features
-            chists = compute_color_histograms(sample_cloud, using_hsv=False)
+            chists = compute_color_histograms(sample_cloud, using_hsv=True)
             normals = get_normals(sample_cloud)
             nhists = compute_normal_histograms(normals)
             feature = np.concatenate((chists, nhists))
@@ -65,4 +82,3 @@ if __name__ == '__main__':
 
 
     pickle.dump(labeled_features, open('training_set.sav', 'wb'))
-

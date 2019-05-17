@@ -3,10 +3,12 @@ import pickle
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import svm
+from pcl_helper import *
+from sklearn import svm, tree
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn import cross_validation
 from sklearn import metrics
+
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
@@ -42,7 +44,10 @@ training_set = pickle.load(open('training_set.sav', 'rb'))
 feature_list = []
 label_list = []
 
+
 for item in training_set:
+#    print item[0]
+#    print item[1]
     if np.isnan(item[0]).sum() < 1:
         feature_list.append(item[0])
         label_list.append(item[1])
@@ -62,7 +67,8 @@ encoder = LabelEncoder()
 y_train = encoder.fit_transform(y_train)
 
 # Create classifier
-clf = svm.SVC(kernel='linear')
+#clf = svm.LinearSVC()
+clf = tree.ExtraTreeClassifier()
 
 # Set up 5-fold cross-validation
 kf = cross_validation.KFold(len(X_train),
@@ -73,7 +79,7 @@ kf = cross_validation.KFold(len(X_train),
 # Perform cross-validation
 scores = cross_validation.cross_val_score(cv=kf,
                                          estimator=clf,
-                                         X=X_train, 
+                                         X=X_train,
                                          y=y_train,
                                          scoring='accuracy'
                                         )
@@ -83,7 +89,7 @@ print('Accuracy: %0.2f (+/- %0.2f)' % (scores.mean(), 2*scores.std()))
 # Gather predictions
 predictions = cross_validation.cross_val_predict(cv=kf,
                                           estimator=clf,
-                                          X=X_train, 
+                                          X=X_train,
                                           y=y_train
                                          )
 
